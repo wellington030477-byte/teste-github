@@ -1,5 +1,5 @@
 @echo off
-REM ==========================================================================
+REM =======================================================================
 REM  PROJETO XML - INTELIGENCIA DE COMPRAS : BASE FISCAL + MOTOR DE CUSTO (v1.1)
 REM  1) Baixa extrator e motor fixados no COMMIT para a subpasta v1.1\
 REM     e confere o SHA-256 a cada execucao.
