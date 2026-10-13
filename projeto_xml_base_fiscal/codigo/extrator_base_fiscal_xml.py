@@ -47,7 +47,7 @@ import zipfile
 import xml.etree.ElementTree as ET
 from collections import Counter, OrderedDict, defaultdict
 
-VERSAO_EXTRATOR = "1.0.0"
+VERSAO_EXTRATOR = "1.1.0"
 
 XLSX_MAX_LINHAS = 1_048_000
 XLSX_MAX_CEL = 32_000
@@ -224,6 +224,7 @@ col("EMIT_UF", "UF do emitente.", "emit/enderEmit/UF")
 col("EMIT_IE", "IE do emitente.", "emit/IE")
 col("EMIT_IEST", "IE do substituto tributario.", "emit/IEST")
 col("EMIT_CRT", "Codigo de regime tributario: 1=Simples, 2=Simples excesso, 3=Normal, 4=MEI.", "emit/CRT")
+col("EMIT_REGIME_DOCUMENTAL", "Leitura do CRT. CRT 3 NAO distingue Lucro Real de Lucro Presumido (informacao externa).", "emit/CRT", "TEXTO", "CLASSIF_DOC")
 col("DEST_CNPJ", "CNPJ do destinatario (loja).", "dest/CNPJ")
 col("DEST_CPF", "CPF do destinatario.", "dest/CPF")
 col("DEST_RAZAO_SOCIAL", "Razao social do destinatario.", "dest/xNome")
@@ -375,15 +376,26 @@ for t, d in [("vBC", "BC ICMS"), ("vICMS", "ICMS"), ("vICMSDeson", "ICMS desoner
 col("NF_MOD_FRETE", "Modalidade do frete.", "transp/modFrete")
 col("NF_INF_AD_FISCO", "Informacoes adicionais de interesse do fisco.", "infAdic/infAdFisco")
 col("NF_INF_COMPLEMENTAR", "Informacoes complementares.", "infAdic/infCpl")
+col("NF_FORMAS_PAGAMENTO", "Formas de pagamento tPag=vPag (90 = sem pagamento).", "pag/detPag/tPag, vPag")
+col("NF_SEM_PAGAMENTO", "S se todas as formas de pagamento sao tPag 90 (sem pagamento).", "pag/detPag/tPag", "FLAG", "CLASSIF_DOC")
+col("NF_REFERENCIADAS", "Chaves de NF-e referenciadas (NFref/refNFe).", "ide/NFref/refNFe")
 
 # --- Calculado / validacao (nao substitui original)
 col("CALC_DIF_VPROD_QCOM_X_VUNCOM", "Diferenca VALOR_PRODUTO - QTD_COMERCIAL*VALOR_UNIT_COMERCIAL. Checagem de consistencia.", "calculado", "NUMERO", "CALCULADO", "VALOR_PRODUTO - QTD_COMERCIAL * VALOR_UNIT_COMERCIAL")
 col("CALC_DIF_VICMS_BC_X_ALIQ", "Diferenca ICMS_vICMS - ICMS_vBC*ICMS_pICMS/100. Checagem de consistencia.", "calculado", "NUMERO", "CALCULADO", "ICMS_vICMS - ICMS_vBC * ICMS_pICMS / 100")
 col("EAN_GTIN_VALIDO", "S se EAN tem 8/12/13/14 digitos e digito verificador correto.", "calculado sobre cEAN", "FLAG", "CALCULADO", "regra GS1 de digito verificador")
 col("EAN_CHAVE_VINCULO", "EAN usado para vinculo entre XMLs: cEAN se valido, senao cEANTrib se valido, senao vazio.", "calculado sobre cEAN/cEANTrib", "TEXTO", "CALCULADO", "SE(EAN valido; EAN; SE(EAN_TRIB valido; EAN_TRIB; ''))")
+col("CALC_VALOR_ITEM_RECONSTRUIDO", "Total do item reconstruido pela composicao do layout NF-e (para conferir com vItem).", "calculado", "NUMERO", "CALCULADO",
+    "VALOR_PRODUTO - VALOR_DESCONTO + VALOR_FRETE + VALOR_SEGURO + VALOR_OUTRAS_DESP + ICMS_vICMSST + ICMS_vFCPST + IPI_vIPI + II_vII - ICMS_vICMSDeson (somente se indDeduzDeson=1); ausente = 0")
+col("CALC_DIF_VITEM_RECONSTRUIDO", "VALOR_TOTAL_ITEM_XML - CALC_VALOR_ITEM_RECONSTRUIDO (vazio se vItem ausente).", "calculado", "NUMERO", "CALCULADO", "VALOR_TOTAL_ITEM_XML - CALC_VALOR_ITEM_RECONSTRUIDO")
 
 # --- Classificacao documental
-col("CLASS_DOC_TIPO_OPERACAO", "Organizacao da operacao: MESMA RAIZ CNPJ (provavel transferencia interna) x TERCEIRO; finalidade.", "emit/CNPJ, dest/CNPJ, finNFe, tpNF", "TEXTO", "CLASSIF_DOC")
+col("EMIT_E_REDE", "S se o CNPJ emitente pertence a rede (lista --cnpjs-rede e/ou pastas de loja).", "emit/CNPJ x cadastro da rede", "FLAG", "CLASSIF_DOC")
+col("DEST_E_REDE", "S se o CNPJ destinatario pertence a rede.", "dest/CNPJ x cadastro da rede", "FLAG", "CLASSIF_DOC")
+col("FLAG_MESMA_RAIZ_CNPJ", "S se emitente e destinatario tem a mesma raiz de CNPJ (8 digitos).", "emit/CNPJ, dest/CNPJ", "FLAG", "CLASSIF_DOC")
+col("CLASS_DOC_OPERACAO_CODIGO", "COMPRA_DE_TERCEIRO / TRANSFERENCIA_ENTRE_LOJAS / SAIDA_PROPRIA_DA_REDE / ENTRADA_EMITIDA_PELA_REDE / TERCEIRO_PARA_TERCEIRO / INDETERMINADA.", "EMIT_E_REDE, DEST_E_REDE, tpNF", "TEXTO", "CLASSIF_DOC")
+col("CLASS_DOC_TIPO_OPERACAO", "Codigo da operacao + finalidade + tpNF.", "emit/CNPJ, dest/CNPJ, finNFe, tpNF", "TEXTO", "CLASSIF_DOC")
+col("CLASS_DOC_NATUREZA_CFOP", "Familia do CFOP pela tabela CFOP (VENDA, VENDA_ST, TRANSFERENCIA, BONIFICACAO_BRINDE, DEVOLUCAO, OUTRAS).", "det/prod/CFOP", "TEXTO", "CLASSIF_DOC")
 col("CLASS_DOC_ICMS", "Descricao documental do tratamento de ICMS conforme grupo/CST no XML.", "ICMS grupo/CST/CSOSN/valores", "TEXTO", "CLASSIF_DOC")
 col("FLAG_ST_DESTACADA", "S se vICMSST > 0 no item.", "ICMSxx/vICMSST", "FLAG", "CLASSIF_DOC")
 col("FLAG_BC_ST_INFORMADA", "S se vBCST > 0 no item.", "ICMSxx/vBCST", "FLAG", "CLASSIF_DOC")
@@ -408,7 +420,7 @@ IDX = {c: i for i, c in enumerate(ITEM_COLS)}
 
 
 # textos que se repetem muito entre itens: uma unica copia em memoria
-INTERNAR = ["CLASS_DOC_TIPO_OPERACAO", "CLASS_DOC_ICMS", "CLASS_DOC_PIS", "CLASS_DOC_COFINS", "CLASS_DOC_IPI",
+INTERNAR = ["CLASS_DOC_TIPO_OPERACAO", "CLASS_DOC_OPERACAO_CODIGO", "CLASS_DOC_NATUREZA_CFOP", "EMIT_REGIME_DOCUMENTAL", "CLASS_DOC_ICMS", "CLASS_DOC_PIS", "CLASS_DOC_COFINS", "CLASS_DOC_IPI",
             "CENARIO_FISCAL_CHAVE", "ALERTAS_DOCUMENTAIS", "INDICIO_PARA_VALIDACAO", "NCM", "CEST", "CFOP",
             "UNID_COMERCIAL", "UNID_TRIBUTAVEL", "ICMS_GRUPO_TAG", "ICMS_CST", "ICMS_ORIGEM", "PIS_GRUPO_TAG", "PIS_CST",
             "COFINS_GRUPO_TAG", "COFINS_CST", "IPI_GRUPO_TAG", "IPI_CST", "IBSCBS_CST", "IBSCBS_CCLASSTRIB", "EAN", "EAN_TRIB"]
@@ -618,6 +630,36 @@ def descreve_ipi(grupo, cst, vipi):
     return base
 
 
+REDE = {"cnpjs": set(), "fonte": ""}
+
+CFOP_FAMILIA = {
+    "101": "VENDA", "102": "VENDA", "103": "VENDA", "104": "VENDA", "105": "VENDA", "106": "VENDA",
+    "107": "VENDA_NAO_CONTRIBUINTE", "108": "VENDA_NAO_CONTRIBUINTE",
+    "401": "VENDA_ST", "402": "VENDA_ST", "403": "VENDA_ST", "405": "VENDA_ST",
+    "151": "TRANSFERENCIA", "152": "TRANSFERENCIA", "153": "TRANSFERENCIA", "155": "TRANSFERENCIA", "156": "TRANSFERENCIA",
+    "408": "TRANSFERENCIA_ST", "409": "TRANSFERENCIA_ST",
+    "910": "BONIFICACAO_DOACAO_BRINDE", "911": "AMOSTRA_GRATIS",
+    "201": "DEVOLUCAO", "202": "DEVOLUCAO", "410": "DEVOLUCAO_ST", "411": "DEVOLUCAO_ST", "413": "DEVOLUCAO",
+    "949": "OUTRAS_SAIDAS_ENTRADAS", "929": "LANCAMENTO_CUPOM_FISCAL",
+}
+
+
+def natureza_cfop(cfop):
+    if not cfop or len(cfop) != 4 or not cfop.isdigit():
+        return "CFOP AUSENTE OU FORA DO PADRAO"
+    fam = CFOP_FAMILIA.get(cfop[1:], "SEM_MAPEAMENTO")
+    esfera = {"1": "ENTRADA_ESTADUAL", "2": "ENTRADA_INTERESTADUAL", "3": "ENTRADA_EXTERIOR",
+              "5": "SAIDA_ESTADUAL", "6": "SAIDA_INTERESTADUAL", "7": "SAIDA_EXTERIOR"}.get(cfop[0], "?")
+    return "%s | %s (CFOP %s)" % (fam, esfera, cfop)
+
+
+def regime_documental(crt):
+    return {"1": "SIMPLES NACIONAL (CRT 1)",
+            "2": "SIMPLES NACIONAL - EXCESSO DE SUBLIMITE (CRT 2)",
+            "3": "REGIME NORMAL (CRT 3) - LUCRO REAL OU PRESUMIDO NAO DETERMINAVEL PELO XML",
+            "4": "SIMPLES NACIONAL - MEI (CRT 4)"}.get(crt or "", "CRT AUSENTE OU NAO MAPEADO (%s)" % crt)
+
+
 def extrair_nfe(root, meta, log, eventos_cancel, sink_longa):
     """Retorna lista de Row (1 por item). Tags folha vao para sink_longa (streaming)."""
     nfe = root if local(root.tag) == "NFe" else filho(root, "NFe")
@@ -672,19 +714,39 @@ def extrair_nfe(root, meta, log, eventos_cancel, sink_longa):
     cab["NF_MOD_FRETE"] = txt(inf, "transp", "modFrete")
     cab["NF_INF_AD_FISCO"] = txt(inf, "infAdic", "infAdFisco")
     cab["NF_INF_COMPLEMENTAR"] = txt(inf, "infAdic", "infCpl")
+    cab["EMIT_REGIME_DOCUMENTAL"] = regime_documental(cab["EMIT_CRT"])
+    pags = [(txt(dp, "tPag"), txt(dp, "vPag")) for dp in filhos(filho(inf, "pag"), "detPag")]
+    cab["NF_FORMAS_PAGAMENTO"] = pares_txt(pags) or None
+    cab["NF_SEM_PAGAMENTO"] = fmt_flag(bool(pags) and all((t or "") == "90" for t, _ in pags))
+    refs = [txt(nr, "refNFe") for nr in filhos(ide, "NFref") if txt(nr, "refNFe")]
+    cab["NF_REFERENCIADAS"] = " ; ".join(refs) or None
 
-    # Classificacao de operacao (documental)
-    e_raiz = so_digitos(cab["EMIT_CNPJ"])[:8]
-    d_raiz = so_digitos(cab["DEST_CNPJ"])[:8]
-    if e_raiz and d_raiz and e_raiz == d_raiz:
-        op = "MESMA RAIZ CNPJ EMITENTE/DESTINATARIO (PROVAVEL TRANSFERENCIA INTERNA)"
-    elif e_raiz:
-        op = "EMITENTE TERCEIRO (PROVAVEL COMPRA/ENTRADA DE FORNECEDOR)"
+    # Classificacao de operacao (documental) - pertencimento a rede pela lista de CNPJs
+    e_cnpj = so_digitos(cab["EMIT_CNPJ"])
+    d_cnpj = so_digitos(cab["DEST_CNPJ"])
+    e_rede = e_cnpj in REDE["cnpjs"]
+    d_rede = d_cnpj in REDE["cnpjs"]
+    cab["EMIT_E_REDE"] = fmt_flag(e_rede)
+    cab["DEST_E_REDE"] = fmt_flag(d_rede)
+    cab["FLAG_MESMA_RAIZ_CNPJ"] = fmt_flag(bool(e_cnpj) and bool(d_cnpj) and e_cnpj[:8] == d_cnpj[:8])
+    if e_rede and d_rede:
+        op = "TRANSFERENCIA_ENTRE_LOJAS"
+    elif e_rede and cab["TIPO_NF"] == "0":
+        op = "ENTRADA_EMITIDA_PELA_REDE"
+    elif e_rede:
+        op = "SAIDA_PROPRIA_DA_REDE"
+    elif d_rede:
+        op = "COMPRA_DE_TERCEIRO"
+    elif REDE["cnpjs"]:
+        op = "TERCEIRO_PARA_TERCEIRO"
     else:
-        op = "EMITENTE SEM CNPJ"
+        op = "INDETERMINADA"
+    cab["CLASS_DOC_OPERACAO_CODIGO"] = op
     fin = {"1": "NORMAL", "2": "COMPLEMENTAR", "3": "AJUSTE", "4": "DEVOLUCAO"}.get(cab["FINALIDADE_NFE"] or "", "FINALIDADE " + str(cab["FINALIDADE_NFE"]))
     tp = {"0": "TPNF ENTRADA", "1": "TPNF SAIDA"}.get(cab["TIPO_NF"] or "", "TPNF ?")
     class_op = "%s | %s | %s" % (op, fin, tp)
+    infcpl_up = ((cab["NF_INF_COMPLEMENTAR"] or "") + " " + (cab["NF_INF_AD_FISCO"] or "")).upper()
+    deson_texto = "DESONERAD" in infcpl_up
 
     itens = []
     for det in dets:
@@ -880,6 +942,15 @@ def extrair_nfe(root, meta, log, eventos_cancel, sink_longa):
 
         # ---- Classificacao documental
         r["CLASS_DOC_TIPO_OPERACAO"] = class_op
+        r["CLASS_DOC_NATUREZA_CFOP"] = natureza_cfop(r["CFOP"])
+        z = lambda v: v or 0.0
+        recon = (z(r["VALOR_PRODUTO"]) - z(r["VALOR_DESCONTO"]) + z(r["VALOR_FRETE"]) + z(r["VALOR_SEGURO"]) +
+                 z(r["VALOR_OUTRAS_DESP"]) + z(vI("vICMSST")) + z(vI("vFCPST")) + z(r["IPI_vIPI"]) + z(r["II_vII"]))
+        if icms_vals.get("indDeduzDeson") == "1":
+            recon -= z(vI("vICMSDeson"))
+        r["CALC_VALOR_ITEM_RECONSTRUIDO"] = round(recon, 2) + 0.0
+        if r["VALOR_TOTAL_ITEM_XML"] is not None:
+            r["CALC_DIF_VITEM_RECONSTRUIDO"] = round(r["VALOR_TOTAL_ITEM_XML"] - recon, 2) + 0.0
         r["CLASS_DOC_ICMS"] = descreve_icms(r["ICMS_GRUPO_TAG"], r["ICMS_CST"] or "", r["ICMS_CSOSN"] or "", vI)
         r["FLAG_ST_DESTACADA"] = fmt_flag(gt0(vI("vICMSST")))
         r["FLAG_BC_ST_INFORMADA"] = fmt_flag(gt0(vI("vBCST")))
@@ -944,6 +1015,18 @@ def extrair_nfe(root, meta, log, eventos_cancel, sink_longa):
             al.append("ITEM_SEM_GRUPO_ICMS")
         if r["PIS_GRUPO_TAG"] is None or r["COFINS_GRUPO_TAG"] is None:
             al.append("ITEM_SEM_GRUPO_PIS_OU_COFINS")
+        if r["CALC_DIF_VITEM_RECONSTRUIDO"] is not None and abs(r["CALC_DIF_VITEM_RECONSTRUIDO"]) > 0.011:
+            al.append("VITEM_DIFERE_DA_RECONSTRUCAO")
+        if deson_texto and not gt0(vI("vICMSDeson")):
+            al.append("INFCPL_CITA_DESONERACAO_SEM_vICMSDeson_NO_ITEM")
+        if (r["EAN"] or "") in ("", "SEM GTIN") and gtin_valido(r["COD_PRODUTO_FORNECEDOR"] or ""):
+            al.append("CPROD_TEM_FORMATO_GTIN_COM_CEAN_SEM_GTIN")
+        if op == "INDETERMINADA":
+            al.append("OPERACAO_INDETERMINADA_SEM_CADASTRO_DA_REDE")
+        if op == "TERCEIRO_PARA_TERCEIRO":
+            al.append("NOTA_SEM_CNPJ_DA_REDE_COMO_EMITENTE_OU_DESTINATARIO")
+        if e_rede != d_rede and cab["FLAG_MESMA_RAIZ_CNPJ"] == "S":
+            al.append("MESMA_RAIZ_CNPJ_MAS_UM_LADO_FORA_DO_CADASTRO_DA_REDE")
         r["ALERTAS_DOCUMENTAIS"] = " | ".join(al) or None
 
         # ---- Indicios (hipoteses, nao fatos)
@@ -958,8 +1041,14 @@ def extrair_nfe(root, meta, log, eventos_cancel, sink_longa):
             ind.append("PIS/COFINS SEM DEBITO NO XML (CST %s/%s) - ENQUADRAMENTO DO PRODUTO NAO DEMONSTRADO" % (r["PIS_CST"], r["COFINS_CST"]))
         if r["FLAG_ST_DESTACADA"] == "S" or r["ICMS_CST"] == "60" or r["FLAG_BC_ST_INFORMADA"] == "S":
             ind.append("PRODUTO COM INDICIO DE ICMS-ST NO DOCUMENTO - REGRA DE ST DA UF REQUER VALIDACAO")
-        if "MESMA RAIZ" in class_op:
+        if op == "TRANSFERENCIA_ENTRE_LOJAS":
             ind.append("DOCUMENTO DE TRANSFERENCIA INTERNA - TRIBUTACAO PODE NAO REPRESENTAR A DA COMPRA")
+        if op == "SAIDA_PROPRIA_DA_REDE":
+            ind.append("SAIDA PROPRIA DA REDE (VENDA/REMESSA) - NAO E AQUISICAO")
+        if r["EMIT_CRT"] in ("1", "2", "4"):
+            ind.append("FORNECEDOR DO SIMPLES NACIONAL PELO CRT - REGRA DE CREDITO REQUER VALIDACAO")
+        if "BONIFICACAO" in (r["CLASS_DOC_NATUREZA_CFOP"] or ""):
+            ind.append("BONIFICACAO/BRINDE PELO CFOP - TRATAMENTO NO CUSTO REQUER DEFINICAO")
         r["INDICIO_PARA_VALIDACAO"] = " | ".join(ind) or None
         r["STATUS_VALIDACAO_FISCAL"] = "PENDENTE"
         for k in INTERNAR:
@@ -1074,10 +1163,10 @@ def calc_divergencias(itens):
                 continue
             eans_div.add(ean)
             fornecedores = {r["EMIT_CNPJ"] for r in regs}
-            ops = {("INTERNA" if "MESMA RAIZ" in (r["CLASS_DOC_TIPO_OPERACAO"] or "") else "TERCEIRO") for r in regs}
+            ops = {r["CLASS_DOC_OPERACAO_CODIGO"] or "?" for r in regs}
             # divergencia dentro do mesmo fornecedor?
             mesmo_forn = any(len({vstr(r[campo]) for r in regs if r["EMIT_CNPJ"] == f}) > 1 for f in fornecedores)
-            so_terc = [r for r in regs if "MESMA RAIZ" not in (r["CLASS_DOC_TIPO_OPERACAO"] or "")]
+            so_terc = [r for r in regs if r["CLASS_DOC_OPERACAO_CODIGO"] == "COMPRA_DE_TERCEIRO"]
             div_so_terc = len({vstr(r[campo]) for r in so_terc}) > 1
             linhas.append(OrderedDict([
                 ("EAN_CHAVE_VINCULO", ean),
@@ -1149,7 +1238,7 @@ def completude(r):
     pts += 1 if r["NCM"] else 0
     pts += 1 if r["PROT_CSTAT"] == "100" else 0
     pts += 1 if not r["ALERTAS_DOCUMENTAIS"] else 0
-    pts += 1 if "TERCEIRO" in (r["CLASS_DOC_TIPO_OPERACAO"] or "") else 0
+    pts += 1 if r["CLASS_DOC_OPERACAO_CODIGO"] == "COMPRA_DE_TERCEIRO" else 0
     return pts
 
 
@@ -1341,6 +1430,9 @@ def main(argv=None):
     ap.add_argument("--excluir", action="append", default=[], help="Nome de pasta a ignorar (repetivel)")
     ap.add_argument("--amostra-por-cenario", type=int, default=3)
     ap.add_argument("--max-eans-divergentes-amostra", type=int, default=150)
+    ap.add_argument("--cnpjs-rede", default="", help="CSV/TXT com CNPJs das lojas da rede (1 por linha ou coluna CNPJ)")
+    ap.add_argument("--sem-inferir-rede-pelas-pastas", action="store_true",
+                    help="Nao considerar pastas com 14 digitos como CNPJ de loja da rede")
     ap.add_argument("--sem-zip", action="store_true", help="Nao ler .zip/.rar")
     ap.add_argument("--sem-xlsx", action="store_true")
     a = ap.parse_args(argv)
@@ -1356,7 +1448,11 @@ def main(argv=None):
         excluir_auto = os.path.abspath(a.saida)
     else:
         excluir_auto = ""
-    os.makedirs(exec_dir, exist_ok=False)  # nunca sobrescreve execucao anterior
+    n = 1
+    while os.path.exists(exec_dir):  # nunca sobrescreve execucao anterior
+        n += 1
+        exec_dir = os.path.join(os.path.abspath(a.saida), "EXEC_%s_%02d" % (inicio.strftime("%Y%m%d_%H%M%S"), n))
+    os.makedirs(exec_dir, exist_ok=False)
     log = Log()
 
     def progresso(msg):
@@ -1456,6 +1552,33 @@ def main(argv=None):
             log.add("ERRO", "INVENTARIO", p, str(e), "Permissao/arquivo em uso/sincronizacao", "Arquivo nao lido", "Registrado no inventario")
 
     progresso("Passo 1 concluido: %d arquivos inventariados" % len(inv))
+    # --- Cadastro da rede (classificacao de operacao)
+    fontes = []
+    if a.cnpjs_rede:
+        try:
+            with open(a.cnpjs_rede, encoding="utf-8-sig") as fh:
+                for linha in fh:
+                    for tok in re.split(r"[;,\t]", linha):
+                        d = so_digitos(tok)
+                        if len(d) == 14:
+                            REDE["cnpjs"].add(d)
+            fontes.append("ARQUIVO:%s" % a.cnpjs_rede)
+        except Exception as e:
+            log.add("ERRO", "CADASTRO_REDE", a.cnpjs_rede, str(e), "Arquivo inexistente/ilegivel", "Classificacao de operacao sem o arquivo",
+                    "Seguiu com inferencia por pastas (se habilitada)")
+    if not a.sem_inferir_rede_pelas_pastas:
+        n0 = len(REDE["cnpjs"])
+        for rec in inv:
+            loja, _ = info_pasta(rec["CAMINHO_RELATIVO"] or "")
+            if loja:
+                REDE["cnpjs"].add(loja)
+        fontes.append("PASTAS_DE_LOJA(+%d)" % (len(REDE["cnpjs"]) - n0))
+    REDE["fonte"] = " + ".join(fontes)
+    if not REDE["cnpjs"]:
+        log.add("AVISO", "CADASTRO_REDE", "-", "Nenhum CNPJ da rede conhecido", "Sem --cnpjs-rede e sem pastas de loja",
+                "Operacoes ficarao INDETERMINADA", "Informar --cnpjs-rede")
+    progresso("Cadastro da rede: %d CNPJs (%s)" % (len(REDE["cnpjs"]), REDE["fonte"]))
+
     # --- Passo 2: canonico por hash e por chave (ordem deterministica)
     def prioridade(rec):
         ir = info[id(rec)]
@@ -1562,6 +1685,15 @@ def main(argv=None):
         C("QUANTITATIVA", "Arquivos com STATUS=%s" % s, n, "ATENCAO" if s in ("ERRO_LEITURA", "COMPACTADO_NAO_PROCESSADO") else "INFO")
     C("QUANTITATIVA", "Notas distintas na base (chaves canonicas)", len(canonicos))
     C("QUANTITATIVA", "Itens extraidos", len(itens))
+    C("QUANTITATIVA", "CNPJs da rede usados na classificacao", len(REDE["cnpjs"]), det="%s: %s" % (REDE["fonte"], ", ".join(sorted(REDE["cnpjs"]))))
+    C("QUANTITATIVA", "Itens por codigo de operacao", len({r["CLASS_DOC_OPERACAO_CODIGO"] for r in itens}),
+      det=" ; ".join("%s (%d)" % kv for kv in Counter(r["CLASS_DOC_OPERACAO_CODIGO"] for r in itens).most_common()))
+    C("QUANTITATIVA", "Itens por regime documental do emitente (CRT)", len({r["EMIT_CRT"] for r in itens}),
+      det=" ; ".join("%s (%d)" % kv for kv in Counter(r["EMIT_REGIME_DOCUMENTAL"] for r in itens).most_common()))
+    vit = [r for r in itens if r["CALC_DIF_VITEM_RECONSTRUIDO"] is not None]
+    vit_bad = [r["ID_REGISTRO"] for r in vit if abs(r["CALC_DIF_VITEM_RECONSTRUIDO"]) > 0.011]
+    C("ESTRUTURAL", "Itens com vItem: total reconstruido confere (tolerancia 0,01)", "%d de %d" % (len(vit) - len(vit_bad), len(vit)),
+      "OK" if not vit_bad else "ATENCAO", ", ".join(vit_bad[:20]))
     C("QUANTITATIVA", "Fornecedores (EMIT_CNPJ distintos)", len({r["EMIT_CNPJ"] for r in itens}))
     C("QUANTITATIVA", "Destinatarios (DEST_CNPJ distintos)", len({r["DEST_CNPJ"] for r in itens}))
     C("QUANTITATIVA", "EANs validos distintos (EAN_CHAVE_VINCULO)", len({r["EAN_CHAVE_VINCULO"] for r in itens if r["EAN_CHAVE_VINCULO"]}))
@@ -1707,6 +1839,7 @@ def main(argv=None):
         ("ARQUIVOS_LIDOS", len(inv)), ("PROCESSADOS", len(canonicos)),
         ("DUPLICADOS", stat.get("DUPLICADO_HASH", 0) + stat.get("DUPLICADO_CHAVE", 0)),
         ("ERROS", stat.get("ERRO_LEITURA", 0)), ("ITENS", len(itens)), ("CENARIOS", len(mapa)), ("AMOSTRAS", len(amostra)),
+        ("CNPJS_REDE", sorted(REDE["cnpjs"])), ("FONTE_CNPJS_REDE", REDE["fonte"]),
         ("PARAMETROS", vars(a)),
     ])
     with open(os.path.join(exec_dir, "EXECUCAO.json"), "w", encoding="utf-8") as fh:
