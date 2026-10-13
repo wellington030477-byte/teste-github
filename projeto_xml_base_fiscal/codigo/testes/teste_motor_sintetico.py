@@ -56,7 +56,10 @@ def main():
     # E: saida propria (venda a CPF)
     chE, xE = t.nfe(LOJA, 15, [t.item(1, t.EAN_A, "30049099", "5102", icms00, pis01, cof01)], dest="00000000000")
     xE = xE.replace("<CNPJ>00000000000</CNPJ>", "<CPF>12345678909</CPF>")
-    for nome, x in (("A.xml", xA), ("B.xml", xB), ("C.xml", xC), ("D.xml", xD), ("E.xml", xE)):
+    # F: nota de terceiro para loja com finalidade 4 (devolucao)
+    chF, xF = t.nfe(t.F1, 16, [t.item(1, t.EAN_A, "30049099", "5202", icms00, pis01, cof01)], dest=LOJA)
+    xF = xF.replace("<finNFe>1</finNFe>", "<finNFe>4</finNFe>")
+    for nome, x in (("A.xml", xA), ("B.xml", xB), ("C.xml", xC), ("D.xml", xD), ("E.xml", xE), ("F.xml", xF)):
         open(os.path.join(org, nome), "w", encoding="utf-8").write(x)
     rede = os.path.join(tmp, "REDE.csv")
     open(rede, "w").write("CNPJ\n%s\n%s\n" % (LOJA, LOJA2))
@@ -92,6 +95,7 @@ def main():
     ok(c1[chA]["H_ICMS_CREDITO_HIPOTESE"] == "15,3", "A: credito ICMS calculado apenas como HIPOTESE")
     ok(c1[chB]["R_ICMS_ST_TRATAMENTO"] == "CUSTO_SEM_CREDITO" and c1[chB]["L_ICMS_ST"] == "4,59", "B: ICMS-ST literal permanece no custo")
     ok("TRANSFERENCIA" in c1[chD]["SITUACOES_PARA_DECISAO"], "D: transferencia sinalizada")
+    ok("FINALIDADE DA NF-e 4" in c1[chF]["SITUACOES_PARA_DECISAO"], "F: devolucao (finNFe 4) sinalizada, nao tratada como compra normal")
     comp = ler(os.path.join(m1, "09_COMPOSICAO_CUSTO_LONGA.csv"))
     camadas = {c["CAMADA"] for c in comp}
     ok({"1 DADO LITERAL DO XML", "3 CALCULO", "5 HIPOTESE", "6 PENDENTE DE VALIDACAO FISCAL"} <= camadas, "composicao com camadas literal/calculo/hipotese/pendente")

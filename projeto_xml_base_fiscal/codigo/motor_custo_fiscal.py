@@ -41,7 +41,7 @@ import os
 import sys
 from collections import Counter, OrderedDict, defaultdict
 
-VERSAO_MOTOR = "0.1.1"
+VERSAO_MOTOR = "0.1.2"
 
 CAMADA = {
     "LIT": "1 DADO LITERAL DO XML",
@@ -310,6 +310,9 @@ def calcular(item, regras, ajustes):
 
     # --- situacoes que exigem decisao
     flags = []
+    fin = item.get("FINALIDADE_NFE") or ""
+    if fin and fin != "1":
+        flags.append("FINALIDADE DA NF-e %s (2 complementar, 3 ajuste, 4 devolucao): nao e compra normal, tratar a parte" % fin)
     if item.get("NF_SEM_PAGAMENTO") == "S":
         flags.append("NOTA SEM PAGAMENTO (tPag 90): tratamento de custo de bonificacao/brinde requer definicao")
     if "BONIFICACAO" in (item.get("CLASS_DOC_NATUREZA_CFOP") or ""):
