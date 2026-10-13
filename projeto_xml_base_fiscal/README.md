@@ -1,10 +1,12 @@
-# PROJETO XML: BASE FISCAL PARA PRECIFICACAO
+# PROJETO XML - INTELIGENCIA DE COMPRAS: BASE FISCAL E CUSTO FISCAL DE AQUISICAO
 
 Base de amostras fiscais **rastreável e auditável**, extraída exclusivamente dos XMLs de NF-e,
 com separação rigorosa entre **dado original**, **classificação documental** e **interpretação fiscal (pendente)**.
 
-> Fase atual: MAPEAR, INVENTARIAR, INSPECIONAR, EXTRAIR, CLASSIFICAR DOCUMENTALMENTE, AMOSTRAR, VALIDAR e DOCUMENTAR.
-> Esta fase **não** define tributação final, preço, margem nem mark-up.
+> Fase 1 (concluída): base fiscal por item (extrator v1.1.0).
+> Fase 2 (em andamento): **motor de custo fiscal de aquisição** para farmácias em Lucro Real
+> (`docs/MOTOR_CUSTO_FISCAL.md`). Regras de crédito todas PENDENTES de validação contábil.
+> Não define preço, margem nem mark-up. Estado e lacunas: `docs/INVENTARIO_E_GAP_CUSTO_FISCAL.md`.
 
 ## Estrutura
 
@@ -12,42 +14,52 @@ com separação rigorosa entre **dado original**, **classificação documental**
 projeto_xml_base_fiscal/
   codigo/
     extrator_base_fiscal_xml.py      extrator reproduzível (somente leitura dos XMLs)
-    EXECUTAR_EXTRACAO.bat            execução no Windows (caminhos T:\ já configurados; script na mesma pasta)
-    INSTALAR_E_EXECUTAR.bat          baixa o extrator fixado em commit, confere SHA-256 e executa
-    testes/teste_extrator_sintetico.py  teste automatizado com XMLs fictícios (30 checagens)
+    motor_custo_fiscal.py            motor de custo fiscal (lê a base do extrator)
+    config/REGRAS_CREDITO_LUCRO_REAL.csv  regras de crédito parametrizáveis (validação contábil)
+    EXECUTAR_EXTRACAO.bat            extrator + motor a partir desta pasta
+    INSTALAR_E_EXECUTAR.bat          baixa extrator e motor fixados em commit, confere SHA-256 e executa
+    testes/teste_extrator_sintetico.py  XMLs fictícios (30 checagens)
+    testes/teste_motor_sintetico.py     XMLs fictícios (22 checagens)
+    testes/teste_referencia_real.py     regressão sobre a biblioteca de XMLs reais do Drive
+    testes/MODELO_EXPECTATIVAS.csv      formato das expectativas (as reais ficam no Drive)
   docs/
+    INVENTARIO_E_GAP_CUSTO_FISCAL.md estado atual x objetivo de custo, dados externos, validações
+    MOTOR_CUSTO_FISCAL.md            fórmula, camadas, regras, ajustes e saídas do motor
     RELATORIO_EXECUCAO_FASE1.md      relatório desta execução (confirmado x classificado x pendente)
     REGRAS_CLASSIFICACAO.md          regras documentais, alertas e indícios usados pelo extrator
     POWER_QUERY_IMPORTACAO.pq        importação no Excel preservando identificadores como texto
 ```
 
-## Onde fica no Drive (integração com o projeto existente)
+## Onde fica no Drive
 
-Já existe em `BASE_XML` a estrutura **PROJETO MESTRE XML - INTELIGENCIA DE COMPRAS** (criada em 10/10/2026).
-Para não criar estrutura paralela, esta fase usa essa estrutura:
+Projeto: `PC_WORK\01_PROJETOS\PROJETO XML - INTELIGENCIA DE COMPRAS` (pasta existente movida, sem duplicar).
+Origem dos XMLs (somente leitura, não é movida): `TRABALHO FARMACIA\BASE ARQUIVOS PARA PESQUISA CONSULTA VINCULO\BASE_XML`
+(no Drive, `TRABALHO FARMACIA` está dentro de `PC_WORK`; o `.bat` testa os dois caminhos no T:).
 
-| Conteúdo | Pasta do projeto mestre |
+| Conteúdo | Pasta do projeto |
 |---|---|
-| Código (`.py`, `.bat`) | `11_SCRIPTS_AUTOMACAO\BASE_FISCAL` |
-| Saídas de cada execução | `02_BASE_PROCESSADA\BASE_FISCAL\EXEC_AAAAMMDD_HHMMSS` |
+| `.bat`, `config\` (regras, `REDE_CNPJS.csv`, `AJUSTES_EXTERNOS.csv`) | `11_SCRIPTS_AUTOMACAO\BASE_FISCAL` |
+| Saídas | `02_BASE_PROCESSADA\BASE_FISCAL\EXEC_...\MOTOR_...` |
 | Documentação | `01_DOCUMENTACAO` |
-| Evidências de teste | `12_TESTES_VALIDACAO` |
-
-A pasta do projeto mestre é **excluída da varredura** para que saídas nunca sejam lidas como origem.
+| Biblioteca de XMLs reais (cópias), manifesto e expectativas | `12_TESTES_VALIDACAO\BASE_FISCAL\XML_REFERENCIA_REAL` |
 
 ## Como executar (Windows)
 
 1. Instalar Python 3.9+ (marcar *Add python.exe to PATH*).
-2. No Drive já existe `PROJETO MESTRE XML - INTELIGENCIA DE COMPRAS\11_SCRIPTS_AUTOMACAO\BASE_FISCAL\INSTALAR_E_EXECUTAR.bat`.
-   Duplo clique nele: baixa o extrator do commit fixado, confere o SHA-256 (não executa se divergir) e roda.
-   Alternativa: copiar `extrator_base_fiscal_xml.py` + `EXECUTAR_EXTRACAO.bat` para a mesma pasta e executar o `.bat`.
-4. Resultado: nova pasta `EXEC_AAAAMMDD_HHMMSS` com `BASE_FISCAL_XML.xlsx` + CSVs + `EXECUCAO.json`.
+2. Duplo clique em `11_SCRIPTS_AUTOMACAO\BASE_FISCAL\INSTALAR_E_EXECUTAR.bat` (v1.1). Ele baixa extrator e motor
+   do commit fixado para `v1.1\`, confere o SHA-256 (não executa se divergir), baixa as regras para `config\`
+   se ainda não existirem, roda o extrator e depois o motor.
+3. BASE_XML em outro lugar: `INSTALAR_E_EXECUTAR.bat "caminho da BASE_XML"`.
+4. Resultado: nova pasta `EXEC_AAAAMMDD_HHMMSS` (base fiscal) com subpasta `MOTOR_AAAAMMDD_HHMMSS` (custo).
 
 Linha de comando equivalente:
 
 ```
-python extrator_base_fiscal_xml.py --origem "T:\Meu Drive\TRABALHO FARMACIA\BASE ARQUIVOS PARA PESQUISA CONSULTA VINCULO\BASE_XML" --saida "T:\Meu Drive\TRABALHO FARMACIA\BASE ARQUIVOS PARA PESQUISA CONSULTA VINCULO\BASE_XML\PROJETO MESTRE XML - INTELIGENCIA DE COMPRAS\02_BASE_PROCESSADA\BASE_FISCAL" --excluir "PROJETO MESTRE XML - INTELIGENCIA DE COMPRAS"
+python extrator_base_fiscal_xml.py --origem "<BASE_XML>" --saida "<PROJETO>\02_BASE_PROCESSADA\BASE_FISCAL" --cnpjs-rede config\REDE_CNPJS.csv
+python motor_custo_fiscal.py --ultima-exec-em "<PROJETO>\02_BASE_PROCESSADA\BASE_FISCAL" --regras config\REGRAS_CREDITO_LUCRO_REAL.csv
 ```
+
+Sem `--cnpjs-rede`, os CNPJs da rede são inferidos pelas pastas de loja (14 dígitos) da BASE_XML.
 
 Arquivo `.rar`: sem a biblioteca `rarfile` + `UnRAR`/7-Zip no PATH, o RAR é **inventariado como
 `COMPACTADO_NAO_PROCESSADO`** (não é ignorado em silêncio). `.zip` é lido em memória, sem extrair.
@@ -66,7 +78,8 @@ Arquivo `.rar`: sem a biblioteca `rarfile` + `UnRAR`/7-Zip no PATH, o RAR é **i
 | `06_LOG_VALIDACAO` | Checagens quantitativas, estruturais e de amostragem (OK / ATENCAO / ERRO). |
 | `06B_LOG_ERROS` | Arquivo, etapa, erro, causa provável, impacto, ação tomada. |
 | `07_DICIONARIO_CAMPOS` | Cada coluna: descrição, origem, tag XML, tipo, exemplo real, se é original/calculado/classificação/interpretação, fórmula. |
-| `EXECUCAO.json` | Versão do extrator, parâmetros, contagens (para a aba `EXECUCOES` do controle mestre). |
+| `EXECUCAO.json` | Versão do extrator, parâmetros, CNPJs da rede usados, contagens (para a aba `EXECUCOES` do controle mestre). |
+| `MOTOR_...\08` a `13` | Custo fiscal por item, composição em camadas, regras, pendências, fora do escopo, log (ver `docs/MOTOR_CUSTO_FISCAL.md`). |
 
 ## Três camadas (nunca misturadas)
 
@@ -87,11 +100,8 @@ Arquivo `.rar`: sem a biblioteca `rarfile` + `UnRAR`/7-Zip no PATH, o RAR é **i
 - Cada execução cria pasta nova: nenhuma saída anterior é sobrescrita.
 - Streaming e baixo uso de memória (uma árvore XML por vez; tabela longa gravada direto em disco).
 
-## Preparação para precificação (não implementado)
+## Próximas tabelas (não implementadas)
 
-Chaves estáveis para futuros vínculos: `ID_REGISTRO` (chave + item), `EAN_CHAVE_VINCULO`, `EMIT_CNPJ`,
-`DEST_CNPJ`/`ARQ_PASTA_LOJA_CNPJ`, `NCM`, `CFOP`, `CENARIO_FISCAL_ID`.
-Tabelas futuras previstas (a criar em fase própria, após validação fiscal):
-`CUSTO_AQUISICAO` (vProd - vDesc + vFrete + vSeg + vOutro + ST + IPI, por item),
-`REGRAS_FISCAIS_VALIDADAS` (por EAN/NCM/UF/regime, com fonte e data da validação),
-`CONDICOES_COMERCIAIS` (verba, bonificação, prazo), `PRECOS_VENDA_E_CONCORRENCIA`, `REGRAS_POR_LOJA`.
+`CUSTO_REFERENCIA_TRANSFERENCIA` (liga transferência à compra original), `CONDICOES_COMERCIAIS`
+(verba, bonificação, prazo), `PRECOS_VENDA_E_CONCORRENCIA`, `REGRAS_POR_LOJA`.
+Preço de venda só depois das regras de custo validadas.

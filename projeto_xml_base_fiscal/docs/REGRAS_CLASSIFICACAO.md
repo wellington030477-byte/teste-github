@@ -7,7 +7,10 @@ Nenhuma delas conclui tributação de produto. Toda conclusão fiscal fica em `S
 
 | Coluna | Regra | Observação |
 |---|---|---|
-| `CLASS_DOC_TIPO_OPERACAO` | Raiz do CNPJ (8 dígitos) emitente = destinatário → `MESMA RAIZ (PROVAVEL TRANSFERENCIA INTERNA)`; senão `EMITENTE TERCEIRO`. Acrescenta finalidade (`finNFe`) e `tpNF`. | Transferências entre lojas podem ter CST/CFOP diferentes da compra original. |
+| `CLASS_DOC_OPERACAO_CODIGO` (v1.1) | Pelo cadastro de CNPJs da rede (`--cnpjs-rede` + pastas de loja): emitente e destinatário da rede → `TRANSFERENCIA_ENTRE_LOJAS`; emitente da rede e `tpNF=0` → `ENTRADA_EMITIDA_PELA_REDE`; emitente da rede → `SAIDA_PROPRIA_DA_REDE`; destinatário da rede → `COMPRA_DE_TERCEIRO`; nenhum dos dois → `TERCEIRO_PARA_TERCEIRO`; sem cadastro → `INDETERMINADA`. | Usado pelo motor de custo. Corrige a regra por raiz (venda a CPF e loja de raiz diferente). |
+| `CLASS_DOC_NATUREZA_CFOP` (v1.1) | Família do CFOP (venda, ST, bonificação, transferência, devolução...) + esfera (estadual/interestadual/exterior). | Descritivo. |
+| `EMIT_REGIME_DOCUMENTAL` (v1.1) | Texto do CRT. CRT 3 = regime normal, **Lucro Real ou Presumido não determinável pelo XML**. | |
+| `CLASS_DOC_TIPO_OPERACAO` (legado) | Raiz do CNPJ (8 dígitos) emitente = destinatário → `MESMA RAIZ (PROVAVEL TRANSFERENCIA INTERNA)`; senão `EMITENTE TERCEIRO`. Acrescenta finalidade (`finNFe`) e `tpNF`. | Transferências entre lojas podem ter CST/CFOP diferentes da compra original. |
 | `CLASS_DOC_ICMS` | Texto pelo grupo/CST/CSOSN do XML + situação dos valores ST (destacada, BC informada com vICMSST zero, retida informada, sem valores). | Descreve o documento, não a regra da UF. |
 | `CLASS_DOC_PIS` / `CLASS_DOC_COFINS` | Grupo + CST + descrição da **tabela de CST** para o código informado pelo emitente + valor destacado ou não. | A descrição da tabela CST é o significado do código, não validação do enquadramento do produto. |
 | `CLASS_DOC_IPI` | Grupo (`IPITrib`/`IPINT`) + CST + valor destacado. | |
@@ -39,6 +42,12 @@ Nenhuma delas conclui tributação de produto. Toda conclusão fiscal fica em `S
 | `NOTA_SEM_PROTOCOLO_NO_ARQUIVO` / `PROTOCOLO_CSTAT_x` | sem protNFe ou cStat ≠ 100/150 |
 | `NOTA_COM_EVENTO_CANCELAMENTO` | evento 110111 encontrado na origem |
 | `ITEM_SEM_GRUPO_ICMS` / `ITEM_SEM_GRUPO_PIS_OU_COFINS` | grupo ausente |
+| `VITEM_DIFERE_DA_RECONSTRUCAO` (v1.1) | \|vItem − (vProd − vDesc + vFrete + vSeg + vOutro + ST + FCP-ST + IPI + II − vICMSDeson dedutível)\| > 0,011 |
+| `INFCPL_CITA_DESONERACAO_SEM_vICMSDeson_NO_ITEM` (v1.1) | informações complementares citam desoneração e o item não tem vICMSDeson |
+| `CPROD_TEM_FORMATO_GTIN_COM_CEAN_SEM_GTIN` (v1.1) | cEAN vazio ou SEM GTIN e cProd com formato/DV de GTIN válido |
+| `OPERACAO_INDETERMINADA_SEM_CADASTRO_DA_REDE` (v1.1) | nenhum CNPJ da rede disponível |
+| `NOTA_SEM_CNPJ_DA_REDE_COMO_EMITENTE_OU_DESTINATARIO` (v1.1) | operação `TERCEIRO_PARA_TERCEIRO` |
+| `MESMA_RAIZ_CNPJ_MAS_UM_LADO_FORA_DO_CADASTRO_DA_REDE` (v1.1) | mesma raiz de CNPJ e só um lado no cadastro |
 
 ## 3. Indícios (camada C, hipóteses)
 
