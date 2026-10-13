@@ -14,6 +14,7 @@ setlocal
 
 set "COMMIT=27a6fc7ae981a0d6190f3d728329101e57a93f4c"
 set "RAW=https://raw.githubusercontent.com/wellington030477-byte/teste-github/%COMMIT%/projeto_xml_base_fiscal/codigo"
+set "BASEDIR=%~dp0"
 set "DIR=%~dp0v1.1\"
 if not exist "%DIR%" mkdir "%DIR%"
 if not exist "%~dp0config" mkdir "%~dp0config"
@@ -81,7 +82,7 @@ exit /b 0
 :obter
 REM %1 destino relativo a esta pasta  %2 caminho no repositorio  %3 SHA-256 esperado
 REM %4 SEMPRE = confere sempre ; SO_DOWNLOAD = confere so ao baixar (arquivo editavel)
-set "ARQ=%~dp0%~1"
+set "ARQ=%BASEDIR%%~1"
 set "BAIXOU="
 if not exist "%ARQ%" (
   echo Baixando %~2 do commit %COMMIT% ...
