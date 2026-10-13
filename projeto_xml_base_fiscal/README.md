@@ -12,7 +12,8 @@ com separação rigorosa entre **dado original**, **classificação documental**
 projeto_xml_base_fiscal/
   codigo/
     extrator_base_fiscal_xml.py      extrator reproduzível (somente leitura dos XMLs)
-    EXECUTAR_EXTRACAO.bat            execução no Windows (caminhos T:\ já configurados)
+    EXECUTAR_EXTRACAO.bat            execução no Windows (caminhos T:\ já configurados; script na mesma pasta)
+    INSTALAR_E_EXECUTAR.bat          baixa o extrator fixado em commit, confere SHA-256 e executa
     testes/teste_extrator_sintetico.py  teste automatizado com XMLs fictícios (30 checagens)
   docs/
     RELATORIO_EXECUCAO_FASE1.md      relatório desta execução (confirmado x classificado x pendente)
@@ -37,8 +38,9 @@ A pasta do projeto mestre é **excluída da varredura** para que saídas nunca s
 ## Como executar (Windows)
 
 1. Instalar Python 3.9+ (marcar *Add python.exe to PATH*).
-2. Copiar `extrator_base_fiscal_xml.py` e `EXECUTAR_EXTRACAO.bat` para a mesma pasta.
-3. Dar duplo clique em `EXECUTAR_EXTRACAO.bat`.
+2. No Drive já existe `PROJETO MESTRE XML - INTELIGENCIA DE COMPRAS\11_SCRIPTS_AUTOMACAO\BASE_FISCAL\INSTALAR_E_EXECUTAR.bat`.
+   Duplo clique nele: baixa o extrator do commit fixado, confere o SHA-256 (não executa se divergir) e roda.
+   Alternativa: copiar `extrator_base_fiscal_xml.py` + `EXECUTAR_EXTRACAO.bat` para a mesma pasta e executar o `.bat`.
 4. Resultado: nova pasta `EXEC_AAAAMMDD_HHMMSS` com `BASE_FISCAL_XML.xlsx` + CSVs + `EXECUCAO.json`.
 
 Linha de comando equivalente:
