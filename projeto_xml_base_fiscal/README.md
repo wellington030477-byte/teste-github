@@ -32,7 +32,7 @@ projeto_xml_base_fiscal/
 
 ## Onde fica no Drive
 
-Projeto: `PC_WORK\01_PROJETOS\PROJETO XML - INTELIGENCIA DE COMPRAS` (pasta existente movida, sem duplicar).
+Projeto: `PC_WORK\01_PROJETOS\01_EM_DESENVOLVIMENTO\PROJETO XML - INTELIGENCIA DE COMPRAS`. O `.bat` v1.1 localiza o projeto pela propria pasta (dois niveis acima), entao continua funcionando se o projeto for movido.
 Origem dos XMLs (somente leitura, não é movida): `TRABALHO FARMACIA\BASE ARQUIVOS PARA PESQUISA CONSULTA VINCULO\BASE_XML`
 (no Drive, `TRABALHO FARMACIA` está dentro de `PC_WORK`; o `.bat` testa os dois caminhos no T:).
 
