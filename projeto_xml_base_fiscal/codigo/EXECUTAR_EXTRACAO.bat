@@ -9,7 +9,11 @@ chcp 65001 >nul
 setlocal
 set "DIR=%~dp0"
 set "BASE_REL=TRABALHO FARMACIA\BASE ARQUIVOS PARA PESQUISA CONSULTA VINCULO\BASE_XML"
-set "PROJETO=T:\Meu Drive\PC_WORK\01_PROJETOS\PROJETO XML - INTELIGENCIA DE COMPRAS"
+REM PROJETO: pasta-avo deste .bat (...\PROJETO\11_SCRIPTS_AUTOMACAO\BASE_FISCAL); senao caminhos conhecidos
+set "PROJETO="
+for %%I in ("%~dp0..\..") do if exist "%%~fI\02_BASE_PROCESSADA" set "PROJETO=%%~fI"
+if not defined PROJETO if exist "T:\Meu Drive\PC_WORK\01_PROJETOS\01_EM_DESENVOLVIMENTO\PROJETO XML - INTELIGENCIA DE COMPRAS" set "PROJETO=T:\Meu Drive\PC_WORK\01_PROJETOS\01_EM_DESENVOLVIMENTO\PROJETO XML - INTELIGENCIA DE COMPRAS"
+if not defined PROJETO set "PROJETO=T:\Meu Drive\PC_WORK\01_PROJETOS\PROJETO XML - INTELIGENCIA DE COMPRAS"
 
 REM BASE_XML: aceita caminho passado como 1o parametro; senao detecta os dois locais conhecidos
 set "ORIGEM="
@@ -31,6 +35,7 @@ if not exist "%PROJETO%" (
   exit /b 2
 )
 set "SAIDA=%PROJETO%\02_BASE_PROCESSADA\BASE_FISCAL"
+echo Projeto                   : "%PROJETO%"
 echo BASE_XML (somente leitura): "%ORIGEM%"
 echo Saida                     : "%SAIDA%"
 
